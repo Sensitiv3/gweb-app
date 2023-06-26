@@ -98,13 +98,13 @@
 	    <repository>
 	      <id>nexus</id>
 	      <name>Landmark Technologies Releases Nexus Repository</name>
-	      <url>http://44.204.84.214:8081/gaby/repository/gaby-frontend-releases/</url>
+	      <url>http://50.19.143.71:8081/repository/Gaby-releases/</url>
 	    </repository>
 	    
 	    <snapshotRepository>
 	      <id>nexus</id>
 	      <name>Landmark Technologies Snapshot Nexus Repository </name>
-	      <url>http://44.204.84.214:8081/gaby/repository/gaby-frontend-snaoshot/</url>
+	      <url>http://50.19.143.71:8081/repository/Gaby-snapshots/</url>
 	    </snapshotRepository>
 	    
 	</distributionManagement>
