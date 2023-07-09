@@ -1,0 +1,52 @@
+node{
+  def mavenHome = tool name: 'maven'
+  stage('1cloneCode'){
+    git "https://github.com/Sensitiv3/gweb-app.git"
+    //sh "git clone https://github.com/Sensitiv3/gweb-app.git"
+    //bat "git clone https://github.com/Sensitiv3/maven-web-application" (windows)
+  }
+  stage('2Test&Build'){
+  //if it fails with the error "command not found" that means it is searching for maven in the wrong folder so define a tool "def mavenHome = tool name:" to help identify where maven is found and named in your installation ie "def mavenHome = tool name: 'maven'".
+  //the command to use when the above is done will be "${mavenHome}/bin/mvn" before what exactly you want it to do.
+    sh "${mavenHome}/bin/mvn clean package"
+    //bat "'${mavenHome}/bin/mvn' clean package" for windows
+  }
+  stage('3codeQuality'){
+  //in configurating sonar command, ensure your pom.xml file has the correct credentials in the properties tag and also apply the def maven home command before the sonar command
+    sh "${mavenHome}/bin/mvn sonar:sonar"
+  }
+  stage('4uploadArtifacts'){
+    //sh "mvn deploy"
+    //http://44.204.84.214:8081/gaby/repository/gaby-frontend-releases/
+    //http://44.204.84.214:8081/gaby/repository/gaby-frontend-snaoshot/
+    //the urls above are urls that are gotten from your nexus repos created for production and these urls should be replaced with the urls in distribution management tag in pom.xml
+    //ensure to remove the "snapshot" at the version tag just after 'packaging' in pom.xml as this is a production project.
+    //enter settings.xml (tools/hudson.tasks.Maven_MavenInstallation/maven/conf/) and add authentication details just before the server closing tag
+    //apply the def maven command before the deploy command
+    sh "${mavenHome}/bin/mvn deploy"
+  }
+  stage('5deploy2UAT'){
+    sh "echo 'deploy to UAT' "
+    deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://23.22.134.198:8080/')], contextPath: null, war: 'target/*war'
+    //to deploy to UAT, create pipeline syntax, select "deloy war/ear to container" under 'sample step',insert the dir (target/*war) under 'war/ear files' add the version of the conainer (tomcat) you using and add credentiials and url of the server to deploy to, click on 'generate pipeline script' then copy and paste script under the deploy stage command.
+  }
+  stage('6approvalGate'){
+	sh "echo 'ready for review' "
+	timeout(time:5, unit:'DAYS') {
+	input message: 'Application ready for deployment, Please review and approve'
+	    }
+  }
+  stage('7deploy2Prod'){
+    deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://23.22.134.198:8080/')], contextPath: null, war: 'target/*war'
+	//sh "sleep 50" //this is a command to use in make the deployment wait for the specific period inputted before deploying.
+	//to deploy to production, the clients needs to approve the application in the UAT environment, after that is done, re-create the process of stage 5 this time adding the container (tomcat), credentials and url of the production server.
+  }
+  stage('8emailNotification'){
+    emailext body: '''Hi All,
+
+Production has been approved
+
+Devops''', recipientProviders: [buildUser(), developers(), upstreamDevelopers(), brokenBuildSuspects(), brokenTestsSuspects(), contributor()], subject: 'Deployment build status', to: 'paulsensitive@gmail.com'
+	//the team needs to be informed if something goes wrong, for this to be done, we will make use of pipeline syntax, select "emailext: Extended Email" under 'sample step', add people to the receipents, add subject, add body, click 'generate pipeline syntax', copy and paste into in stage 8. Apply and save
+  }
+}
